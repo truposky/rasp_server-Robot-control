@@ -52,7 +52,6 @@ const char* keys  =
         ;
 }
 
-void SetupRobots();
 
 
 #define HELLOPORT "4241"
@@ -64,10 +63,12 @@ void SetupRobots();
  char buf[MAXDATASIZE];
 
 //----prototipos-----//
-int comRobot(int id,string ip,string port,int instruction);
-void tokenize(const string s, char c,vector<string>& v);
-void concatenateChar(char c, char *word);
-void operationSend();
+int comRobot(int id,string ip,string port,int instruction);//used for send and recive instructions and data for every robot
+void tokenize(const string s, char c,vector<string>& v);//split the string 
+void concatenateChar(char c, char *word);//not used for now
+void operationSend();//allow the user choose an instruction for send to the robot
+void SetupRobots();//copy the information in the xml file to save in the class robot.
+
 void *get_in_addr(struct sockaddr *sa)
 {
     if (sa->sa_family == AF_INET) {
@@ -79,7 +80,7 @@ void SetupRobots();
 enum {r1, r2, r3, r4,r5};
      //definition of robots
 Robot robot1,robot2,robot3,robot4;//se define la clase para los distintos robots.
-struct record_data
+struct record_data//struct for share information between threads
 {
     std::ostringstream vector_to_marker;
     std::vector<int> ids;
@@ -88,76 +89,9 @@ struct record_data
 };
 struct record_data data;//shared data bewtwen threads
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-/*void *recordAruco(void *threadArg)
-{
-   struct record_data *thread_data=(record_data*)malloc(sizeof(struct record_data));
 
-   thread_data=(struct record_data*) &threadArg;
-    while (thread_data->in_video.grab())
-    {
-        thread_data->in_video.retrieve(thread_data->image);
-        thread_data->image.copyTo(thread_data->image_copy);
-        //std::vector<int> ids;
-        //std::vector<std::vector<cv::Point2f> > corners;
-        cv::aruco::detectMarkers(thread_data->image,thread_data-> dictionary,thread_data-> corners,thread_data-> ids);
-        // if at least one marker detected
-        
-        if (thread_data->ids.size() > 0)
-        {
-            cv::aruco::drawDetectedMarkers(thread_data->image_copy, 
-                thread_data->corners,thread_data-> ids);
-            std::vector<cv::Vec3d> rvecs, tvecs;
-            cv::aruco::estimatePoseSingleMarkers(thread_data->corners,thread_data->marker_lenght_m,
-                    thread_data->camera_matrix, thread_data->dist_coeffs, rvecs, tvecs);
-                    
-            std::cout << "Translation: " << tvecs[0]
-                << "\tRotation: " << rvecs[0] 
-                << std::endl;
-            
-            // Draw axis for each marker
-            for(int i=0; i < thread_data->ids.size(); i++)
-            {
-                
-                cv::aruco::drawAxis(thread_data->image_copy, thread_data->camera_matrix,thread_data-> dist_coeffs,
-                        rvecs[i], tvecs[i], 0.1);
-                // This section is going to print the data for all the detected
-                // markers. If you have more than a single marker, it is
-                // recommended to change the below section so that either you
-                // only print the data for a specific marker, or you print the
-                // data for each marker separately.
-                thread_data->vector_to_marker.str(std::string());
-                thread_data->vector_to_marker << std::setprecision(4)
-                                << "x: " << std::setw(8) << tvecs[0](0);
-                cv::putText(thread_data->image_copy, thread_data->vector_to_marker.str(),
-                            cv::Point(10, 30), cv::FONT_HERSHEY_SIMPLEX, 0.6,
-                            cv::Scalar(0, 252, 124), 1, CV_AVX);
 
-                thread_data->vector_to_marker.str(std::string());
-                thread_data->vector_to_marker << std::setprecision(4)
-                                << "y: " << std::setw(8) << tvecs[0](1);
-                cv::putText(thread_data->image_copy, thread_data->vector_to_marker.str(),
-                            cv::Point(10, 50), cv::FONT_HERSHEY_SIMPLEX, 0.6,
-                            cv::Scalar(0, 252, 124), 1, CV_AVX);
-
-                thread_data->vector_to_marker.str(std::string());
-                thread_data->vector_to_marker << std::setprecision(4)
-                                << "z: " << std::setw(8) << tvecs[0](2);
-                cv::putText(thread_data->image_copy, thread_data->vector_to_marker.str(),
-                            cv::Point(10, 70), cv::FONT_HERSHEY_SIMPLEX, 0.6,
-                            cv::Scalar(0, 252, 124), 1, CV_AVX);
-            }
-        }
-        imshow("Pose estimation", thread_data->image_copy);
-        
-        char key = (char)cv::waitKey(thread_data->wait_time);
-        if (key == 27)
-            break;
-    }
-    thread_data->in_video.release();
-    return NULL;
-}*/
-
-void *dataAruco(void *arg){
+void *dataAruco(void *arg){//thread function
     int id,instruction;
     string ip,port;
     robot1.SetupConection(id,ip,port);//for now only use 1 robot for communication
@@ -179,7 +113,7 @@ void *dataAruco(void *arg){
             //error
         }
         else{
-            
+            //sleep
         }
 
         gettimeofday(&tval_after,NULL);
@@ -327,41 +261,6 @@ int main(int argc,char **argv)
     }
      in_video.release();
 
-    /*while(1){//main loop
-
-         //primero se elige al robot al que se desea mandar una determinada instruccion
-        cout<<"(0)robot1"<<endl<<"(1)robot2"<<endl<<"(2)robot3"<<endl<<"(3)robot4"<<endl;
-        cout<<"eliga el robot con el cual desea comunicarse"<<endl;
-        cin>>cont;
-
-        switch (cont)
-        {
-        case r1 :
-            
-            robot1.SetupConection(id,ip,port);
-            break;
-        
-        case r2 :
-            robot2.SetupConection(id,ip,port);
-            break;
-
-        
-        case r3 :
-            robot3.SetupConection(id,ip,port);
-            break;
-
-        
-        case r4 :
-            robot4.SetupConection(id,ip,port);
-            break;
-            
-        default:
-            break;
-        
-        }
-        comRobot(id,ip,port);
-        
-    }*/
     pthread_exit(NULL);
     return 0;
 }
