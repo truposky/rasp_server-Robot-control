@@ -110,7 +110,7 @@ void *dataAruco(void *arg){//thread function
     double f0=fs/30;
     double w0=2*M_PI*f0;
     double A=30;
-    double vel,td;
+    double vel,td,auxVel=0;
     double w;
     char del=',';
     char wc[sizeof(vel)];
@@ -125,16 +125,20 @@ void *dataAruco(void *arg){//thread function
         else{
             vel=-A*w0;
         }
-        cout<<"vel:"<<vel<<endl;
         w=vel/robot1.radWheel;//arduino needs the radial velocity
+
+        cout<<"vel:"<<vel<<endl;
         cout<<"w:"<<w<<endl;
-         /* comRobot(id,ip,port,OP_VEL_ROBOT);
-            snprintf(operation_send.data,sizeof(w),"%2.4f",w);     
-            snprintf(wc,sizeof(w),"%2.4f",w);
-            strcat(operation_send.data,&del); 
-            strcat(operation_send.data,wc); 
-            cout<<"vel: "<<operation_send.data<<endl;
-            comRobot(id,ip,port,OP_MOVE_WHEEL);*/
+
+        comRobot(id,ip,port,OP_VEL_ROBOT);//request for the velocity of the robot
+        snprintf(operation_send.data,sizeof(w),"%2.4f",w);     
+        snprintf(wc,sizeof(w),"%2.4f",w);
+        strcat(operation_send.data,&del); 
+        strcat(operation_send.data,wc); 
+        if(vel != auxVel){
+            comRobot(id,ip,port,OP_MOVE_WHEEL);
+            auxVel=vel;
+        }
         n++;
         gettimeofday(&tval_after,NULL);
         timersub(&tval_after,&tval_before,&tval_sample);
@@ -149,7 +153,7 @@ void *dataAruco(void *arg){//thread function
         }
         else if( tval_sample.tv_usec<0 || tval_sample.tv_usec>SAMPLINGTIME)
         {
-            cout<<"error"<<endl;
+            error("error short sample time");
         }
         
         
