@@ -58,7 +58,7 @@ const char* keys  =
 #define MYPORT "4242"   // the port users will be connecting to
 #define MAXBUFLEN 256
 #define SAMPLINGTIME 100000 // in usec
-#define MAXSINGALLENGTH 512
+#define MAXSINGNALLENGTH 512
 
 // get sockaddr, IPv4 or IPv6:
  char buf[MAXDATASIZE];
@@ -114,7 +114,7 @@ void *dataAruco(void *arg){//thread function
     double w;
     char del=',';
     char wc[sizeof(vel)];
-    while(n<MAXSINGALLENGTH){
+    while(n<MAXSINGNALLENGTH){
         td=(double)n*0.1; 
 
         gettimeofday(&tval_before,NULL);
