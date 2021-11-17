@@ -13,9 +13,11 @@ class Robot
     private:
         int ID ;
         string ip;
-        string port;    
-    public:
+        string port; 
         
+
+    public:
+        double radWheel=3.35;
         void SetupRobotData(int,string,string);
         void SetupConection(int& ,string& ,string&);
         //void rightWheel(wheel a);

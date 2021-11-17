@@ -30,6 +30,7 @@
 #include <opencv2/aruco.hpp>
 #include <pthread.h> 
 #include <time.h> 
+#include <math.h> 
 using namespace std;
 using namespace tinyxml2;
 
@@ -54,10 +55,10 @@ const char* keys  =
 
 
 
-#define HELLOPORT "4241"
 #define MYPORT "4242"   // the port users will be connecting to
-#define MAXBUFLEN 255
-#define SAMPLINGTIME 100000
+#define MAXBUFLEN 256
+#define SAMPLINGTIME 100000 // in usec
+#define MAXSINGNALLENGTH 512
 
 // get sockaddr, IPv4 or IPv6:
  char buf[MAXDATASIZE];
@@ -68,7 +69,11 @@ void tokenize(const string s, char c,vector<string>& v);//split the string
 void concatenateChar(char c, char *word);//not used for now
 void operationSend();//allow the user choose an instruction for send to the robot
 void SetupRobots();//copy the information in the xml file to save in the class robot.
-
+void error(const char *msg)
+{
+    perror(msg);
+    exit(1);
+}
 void *get_in_addr(struct sockaddr *sa)
 {
     if (sa->sa_family == AF_INET) {
@@ -92,35 +97,68 @@ pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 
 void *dataAruco(void *arg){//thread function
-    int id,instruction;
+    int id;
     string ip,port;
     robot1.SetupConection(id,ip,port);//for now only use 1 robot for communication
     //in this case the experiment needs the velocity 
     struct timeval tval_before, tval_after, tval_sample;
     tval_sample.tv_sec=0;
     tval_sample.tv_usec=0;
-    long int deltaTime=static_cast<long int>(tval_sample.tv_usec);
-    while(true){
-        
-        gettimeofday(&tval_before,NULL);
-        if(deltaTime == SAMPLINGTIME){
-            instruction=OP_VEL_ROBOT;
-            comRobot(id,ip,port,instruction);
 
-        }
-        else if( deltaTime<0)
-        {
-            //error
+    int n=0;
+    double fs=1/0.1;
+    double f0=fs/30;
+    double w0=2*M_PI*f0;
+    double A=30;
+    double vel,td,auxVel=0;
+    double w;
+    char del=',';
+    char wc[sizeof(vel)];
+    while(n<MAXSINGNALLENGTH){
+        td=(double)n*0.1; 
+
+        gettimeofday(&tval_before,NULL);
+        vel=A*w0*cos(w0*td);
+        if(vel>=0){
+            vel=A*w0;
         }
         else{
-            //sleep
+            vel=-A*w0;
         }
+        w=vel/robot1.radWheel;//arduino needs the radial velocity
 
+        cout<<"vel:"<<vel<<endl;
+        cout<<"w:"<<w<<endl;
+
+        comRobot(id,ip,port,OP_VEL_ROBOT);//request for the velocity of the robot
+        snprintf(operation_send.data,sizeof(w),"%2.4f",w);     
+        snprintf(wc,sizeof(w),"%2.4f",w);
+        strcat(operation_send.data,&del); 
+        strcat(operation_send.data,wc); 
+        if(vel != auxVel){
+            comRobot(id,ip,port,OP_MOVE_WHEEL);
+            auxVel=vel;
+        }
+        n++;
         gettimeofday(&tval_after,NULL);
-
         timersub(&tval_after,&tval_before,&tval_sample);
-        deltaTime=static_cast<long int>(tval_sample.tv_usec);
-
+        if(tval_sample.tv_usec != SAMPLINGTIME)
+        {
+            while(tval_sample.tv_usec<SAMPLINGTIME){
+                gettimeofday(&tval_after,NULL);
+                timersub(&tval_after,&tval_before,&tval_sample);
+            }
+            //usleep(SAMPLINGTIME-tval_sample.tv_usec);
+            
+        }
+        else if( tval_sample.tv_usec<0 || tval_sample.tv_usec>SAMPLINGTIME)
+        {
+            error("error short sample time");
+        }
+        
+        
+       
+        
     }
 
     return NULL;
@@ -128,7 +166,7 @@ void *dataAruco(void *arg){//thread function
 int main(int argc,char **argv)
 {
     pthread_t detectAruco;
-    
+    SetupRobots();
 
     cv::CommandLineParser parser(argc, argv, keys);
     parser.about(about);
@@ -291,7 +329,7 @@ void SetupRobots()
         const char* port=robotChild->GetText();
         string p=port;
         cout<<"puerto:"<<p<<endl;
-        
+      
         robot=robot->NextSiblingElement("robot"); 
         switch (i)
         {
@@ -347,6 +385,10 @@ int comRobot(int id,string ip,string port,int instruction){
     break;
    
     }
+    int enable = 1;
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
+    error("setsockopt(SO_REUSEADDR) failed");
+
     if (p == NULL) {
         fprintf(stderr, "talker: failed to create socket\n");
         return 2;
@@ -365,6 +407,7 @@ int comRobot(int id,string ip,string port,int instruction){
         cin>>operation_send.data;
         operation_send.len = strlen (operation_send.data);
     }*/
+    operation_send.len = strlen (operation_send.data);
     operation_send.op=instruction;
 
     if ((numbytes = sendto(sockfd,(char *) &operation_send, operation_send.len+HEADER_LEN, 0,p->ai_addr, p->ai_addrlen)) == -1) {
@@ -372,7 +415,7 @@ int comRobot(int id,string ip,string port,int instruction){
         exit(1);
     }
 
-    cout<<"mensaje enviado"<<endl;
+    //cout<<"mensaje enviado"<<endl;
 
     if((numbytes=recvfrom(sockfd,buf,MAXBUFLEN-1,0,(struct sockaddr*)&robot_addr, &addr_len))==-1){
     }
@@ -383,18 +426,18 @@ int comRobot(int id,string ip,string port,int instruction){
     }
     else{
         
-        cout<<"(servidor) id "<<operation_recv->id;
+       /* cout<<"(servidor) id "<<operation_recv->id;
         cout<<" operacion solicitada [op 0x]"<<operation_recv->op;
-        cout<<" contenido "<<operation_recv->data<<endl;
+        cout<<" contenido "<<operation_recv->data<<endl;*/
     }
     // relaiza operacion solicitada por el cliente 
 
     switch (operation_recv->op){
         case OP_SALUDO:
-            cout<<" contenido "<<operation_recv->data<<endl;
+           // cout<<" contenido "<<operation_recv->data<<endl;
         break;
         case OP_MESSAGE_RECIVE:
-            cout<<" contenido "<<operation_recv->data<<endl;
+           // cout<<" contenido "<<operation_recv->data<<endl;
         break;
         case OP_VEL_ROBOT:
             data=operation_recv->data;
@@ -404,7 +447,7 @@ int comRobot(int id,string ip,string port,int instruction){
             cout<<"velocidad rueda derecha: "<<speed[0]<<endl;
             cout<<"velocidad rueda izquierda: "<<speed[1]<<endl;
             break;
-
+    memset (buf, '\0', MAXDATASIZE);
     }
     
     freeaddrinfo(servinfo);
