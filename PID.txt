@@ -1,0 +1,140 @@
+double                kp=0.02, Ki=0.00007, Kd=0;
+w:8
+velocidad rueda derecha: 0.000000
+velocidad rueda izquierda: 0.280506
+w:8
+velocidad rueda derecha: 0.356319
+velocidad rueda izquierda: 0.382911
+w:8
+velocidad rueda derecha: 0.910435
+velocidad rueda izquierda: 0.973511
+w:8
+velocidad rueda derecha: 12.79595
+velocidad rueda izquierda: 13.004224
+w:8
+velocidad rueda derecha: 14.16328
+velocidad rueda izquierda: 13.362839
+w:8
+velocidad rueda derecha: 14.81132
+velocidad rueda izquierda: 13.938829
+w:8
+velocidad rueda derecha: 14.97734
+velocidad rueda izquierda: 13.398191
+w:8
+velocidad rueda derecha: 14.69212
+velocidad rueda izquierda: 13.778577
+w:8
+velocidad rueda derecha: 14.65714
+velocidad rueda izquierda: 13.090970
+w:8
+velocidad rueda derecha: 14.05739
+velocidad rueda izquierda: 12.751269
+w:8
+velocidad rueda derecha: 13.79613
+velocidad rueda izquierda: 11.939617
+w:8
+velocidad rueda derecha: 13.79613
+velocidad rueda izquierda: 12.599310
+w:8
+velocidad rueda derecha: 12.80117
+velocidad rueda izquierda: 11.957350
+w:8
+velocidad rueda derecha: 11.91650
+velocidad rueda izquierda: 10.821989
+w:8
+velocidad rueda derecha: 11.78590
+velocidad rueda izquierda: 10.794458
+w:8
+velocidad rueda derecha: 11.51406
+velocidad rueda izquierda: 11.319802
+w:8
+velocidad rueda derecha: 11.30391
+velocidad rueda izquierda: 11.583724
+w:8
+velocidad rueda derecha: 12.86568
+velocidad rueda izquierda: 12.519936
+w:8
+
+//prueba 2
+
+double                kp=0.01, Ki=0.00007, Kd=0;
+w:8
+velocidad rueda derecha: 11.62231
+velocidad rueda izquierda: 0.094429
+w:8
+velocidad rueda derecha: 8.236282
+velocidad rueda izquierda: 0.349594
+w:8
+velocidad rueda derecha: 9.953403
+velocidad rueda izquierda: 1.637250
+w:8
+velocidad rueda derecha: 10.41183
+velocidad rueda izquierda: 2.150508
+w:8
+velocidad rueda derecha: 10.77260
+velocidad rueda izquierda: 6.038113
+w:8
+velocidad rueda derecha: 11.26780
+velocidad rueda izquierda: 9.891321
+w:8
+velocidad rueda derecha: 11.62963
+velocidad rueda izquierda: 10.209722
+w:8
+velocidad rueda derecha: 11.58201
+velocidad rueda izquierda: 10.994783
+w:8
+velocidad rueda derecha: 8.141042
+velocidad rueda izquierda: 9.383498
+w:8
+velocidad rueda derecha: 9.039873
+velocidad rueda izquierda: 9.616563
+w:8
+velocidad rueda derecha: 9.740965
+velocidad rueda izquierda: 9.099867
+w:8
+velocidad rueda derecha: 10.42358
+velocidad rueda izquierda: 10.380852
+w:8
+velocidad rueda derecha: 11.47576
+velocidad rueda izquierda: 10.578089
+w:8
+velocidad rueda derecha: 11.95826
+velocidad rueda izquierda: 11.632646
+w:8
+velocidad rueda derecha: 11.70331
+velocidad rueda izquierda: 9.998726
+w:8
+velocidad rueda derecha: 11.57347
+velocidad rueda izquierda: 10.905428
+w:8
+velocidad rueda derecha: 11.86069
+velocidad rueda izquierda: 11.997555
+w:8
+velocidad rueda derecha: 12.48608
+velocidad rueda izquierda: 12.013621
+w:8
+velocidad rueda derecha: 12.43761
+velocidad rueda izquierda: 12.007189
+w:8
+velocidad rueda derecha: 12.75904
+velocidad rueda izquierda: 12.440078
+w:8
+velocidad rueda derecha: 12.71255
+velocidad rueda izquierda: 13.238332
+w:8
+velocidad rueda derecha: 12.83466
+velocidad rueda izquierda: 13.823465
+w:8
+velocidad rueda derecha: 12.51494
+velocidad rueda izquierda: 12.506472
+w:8
+velocidad rueda derecha: 12.36463
+velocidad rueda izquierda: 12.494529
+w:8
+velocidad rueda derecha: 12.49005
+velocidad rueda izquierda: 12.494529
+w:8
+velocidad rueda derecha: 12.37682
+velocidad rueda izquierda: 12.431705
+
+double                kp=0.01, Ki=0.00005, Kd=0;
