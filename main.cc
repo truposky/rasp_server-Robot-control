@@ -31,6 +31,8 @@
 #include <pthread.h> 
 #include <time.h> 
 #include <math.h> 
+#include <list>
+
 using namespace std;
 using namespace tinyxml2;
 
@@ -66,9 +68,8 @@ const char* keys  =
 //----prototipos-----//
 int comRobot(int id,string ip,string port,int instruction);//used for send and recive instructions and data for every robot
 void tokenize(const string s, char c,vector<string>& v);//split the string 
-void concatenateChar(char c, char *word);//not used for now
 void operationSend();//allow the user choose an instruction for send to the robot
-void SetupRobots();//copy the information in the xml file to save in the class robot.
+void SetupRobots();//copy the information in the xml file to save it in the class robot.
 void error(const char *msg)
 {
     perror(msg);
@@ -87,12 +88,13 @@ enum {r1, r2, r3, r4,r5};
 Robot robot1,robot2,robot3,robot4;//se define la clase para los distintos robots.
 struct record_data//struct for share information between threads
 {
-    std::ostringstream vector_to_marker;
-    std::vector<int> ids;
-    std::vector<std::vector<cv::Point2f> > corners;
-    std::vector<cv::Vec3d> rvecs, tvecs;
+    int id;
+    int cx;
+    int n;
 };
-struct record_data data;//shared data bewtwen threads
+list<record_data> arucoInfo;//list for save the information of all the arucos
+list<record_data>::iterator it;
+
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 
@@ -107,18 +109,20 @@ void *dataAruco(void *arg){//thread function
 
     int n=0;
     double fs=1/0.1;
-    double f0=fs/30;
+    double f0=fs/20;
     double w0=2*M_PI*f0;
-    double A=30;
+    double A=16;
     double vel,td,auxVel=0;
-    double w;
+    double w=16;
     char del=',';
     char wc[sizeof(vel)];
+    while(arucoInfo.size()<=0);//the thread stop it until an aruco is detected
+
     while(n<MAXSINGNALLENGTH){
         td=(double)n*0.1; 
 
         gettimeofday(&tval_before,NULL);
-        vel=A*w0*cos(w0*td);
+       vel=A*w0*cos(w0*td);
         if(vel>=0){
             vel=A*w0;
         }
@@ -129,14 +133,13 @@ void *dataAruco(void *arg){//thread function
 
         cout<<"vel:"<<vel<<endl;
         cout<<"w:"<<w<<endl;
-
-        comRobot(id,ip,port,OP_VEL_ROBOT);//request for the velocity of the robot
+        //comRobot(id,ip,port,OP_VEL_ROBOT);//request for the velocity of the robot
         snprintf(operation_send.data,sizeof(w),"%2.4f",w);     
         snprintf(wc,sizeof(w),"%2.4f",w);
         strcat(operation_send.data,&del); 
         strcat(operation_send.data,wc); 
         if(vel != auxVel){
-            comRobot(id,ip,port,OP_MOVE_WHEEL);
+           // comRobot(id,ip,port,OP_MOVE_WHEEL);
             auxVel=vel;
         }
         n++;
@@ -144,11 +147,11 @@ void *dataAruco(void *arg){//thread function
         timersub(&tval_after,&tval_before,&tval_sample);
         if(tval_sample.tv_usec != SAMPLINGTIME)
         {
-            while(tval_sample.tv_usec<SAMPLINGTIME){
+            /*while(tval_sample.tv_usec<SAMPLINGTIME){
                 gettimeofday(&tval_after,NULL);
                 timersub(&tval_after,&tval_before,&tval_sample);
-            }
-            //usleep(SAMPLINGTIME-tval_sample.tv_usec);
+            }*/
+            usleep(SAMPLINGTIME-tval_sample.tv_usec);
             
         }
         else if( tval_sample.tv_usec<0 || tval_sample.tv_usec>SAMPLINGTIME)
@@ -163,11 +166,16 @@ void *dataAruco(void *arg){//thread function
 
     return NULL;
 }
+
+
 int main(int argc,char **argv)
 {
-    pthread_t detectAruco;
+   
+    pthread_t detectAruco;//thread for save the information of detected arucos
     SetupRobots();
-
+    record_data data;//struct for save in linked list
+   
+   //ArucoMarker code
     cv::CommandLineParser parser(argc, argv, keys);
     parser.about(about);
 
@@ -235,31 +243,33 @@ int main(int argc,char **argv)
 
     std::cout << "camera_matrix\n" << camera_matrix << std::endl;
     std::cout << "\ndist coeffs\n" << dist_coeffs << std::endl;
-    //pthread_create(&record,NULL,recordAruco,(void*)&data);
-   
+    
+    
     pthread_create(&detectAruco,NULL,dataAruco,NULL);
+
     while (in_video.grab())
     {
         in_video.retrieve(image);
         image.copyTo(image_copy);
-        //std::vector<int> ids;
-        //std::vector<std::vector<cv::Point2f> > corners;
-        cv::aruco::detectMarkers(image, dictionary, data.corners, data.ids);
-
+        std::vector<int> ids;
+        std::vector<std::vector<cv::Point2f> > corners;
+        cv::aruco::detectMarkers(image, dictionary, corners, ids);
+        
         // if at least one marker detected
-        if (data.ids.size() > 0)
+        if (ids.size() > 0)
         {
-            cv::aruco::drawDetectedMarkers(image_copy, data.corners, data.ids);
-            //std::vector<cv::Vec3d> rvecs, tvecs;
-            cv::aruco::estimatePoseSingleMarkers(data.corners, marker_length_m,
-                    camera_matrix, dist_coeffs, data.rvecs, data.tvecs);
+   
+            cv::aruco::drawDetectedMarkers(image_copy, corners, ids);
+            std::vector<cv::Vec3d> rvecs, tvecs;
+            cv::aruco::estimatePoseSingleMarkers(corners, marker_length_m,
+                    camera_matrix, dist_coeffs, rvecs, tvecs);
                     
             /*std::cout << "Translation: " << tvecs[0]
                 << "\tRotation: " << rvecs[0] 
                 << std::endl;
             */
             // Draw axis for each marker
-            for(int i=0; i < data.ids.size(); i++)
+            /*for(int i=0; i < data.ids.size(); i++)
             {
                 cv::aruco::drawAxis(image_copy, camera_matrix, dist_coeffs,
                         data.rvecs[i], data.tvecs[i], 0.1);
@@ -272,6 +282,7 @@ int main(int argc,char **argv)
                 vector_to_marker.str(std::string());
                 vector_to_marker << std::setprecision(4)
                                  << "x: " << std::setw(8) << data.tvecs[0](0);
+                            
                 cv::putText(image_copy, vector_to_marker.str(),
                             cv::Point(10, 30), cv::FONT_HERSHEY_SIMPLEX, 0.6,
                             cv::Scalar(0, 252, 124), 1, CV_AVX);
@@ -289,8 +300,24 @@ int main(int argc,char **argv)
                 cv::putText(image_copy, vector_to_marker.str(),
                             cv::Point(10, 70), cv::FONT_HERSHEY_SIMPLEX, 0.6,
                             cv::Scalar(0, 252, 124), 1, CV_AVX);
+            }*/
+            //mutex
+            it=arucoInfo.begin();
+            for(int i=0; i < ids.size(); i++)
+            {
+                int cx1 =static_cast<int> ((corners.at(i).at(1).x - corners.at(i).at(0).x)/2 + corners.at(i).at(0).x);
+                int cx2 =static_cast<int> ((corners.at(i).at(3).x  - corners.at(i).at(2).x )/2 + corners.at(i).at(2).x );
+                
+                int cam_center_posX = (cx1 + cx2)/2;
+                data.cx=cam_center_posX;
+                data.id=ids.at(i);
+                data.n=i;
+                arucoInfo.insert(it,data);
+                it++;
             }
+           
         }
+        //end mutex
 
         imshow("Pose estimation", image_copy);
         char key = (char)cv::waitKey(wait_time);
@@ -458,6 +485,7 @@ int comRobot(int id,string ip,string port,int instruction){
     
 
 
+
 }
 void tokenize(const string s, char c,vector<string>& v)//sirve para separa la entrada string.
 {
@@ -475,13 +503,7 @@ void tokenize(const string s, char c,vector<string>& v)//sirve para separa la en
    }
 }
 
-void concatenateChar(char c, char *word){
-    char cadenaTemporal[2];
-    cadenaTemporal[0] = c;
-    cadenaTemporal[1] = '\0';
-    strcat(word, cadenaTemporal);
 
-}
 void operationSend(){
     int value;
     cout<<"(0) SALUDO"<<endl;
